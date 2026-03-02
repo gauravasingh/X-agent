@@ -12,11 +12,21 @@ class PostAnalyzer:
     def __init__(self):
         """Initialize LLM client based on provider"""
         self.provider = LLM_PROVIDER
-        
+        self.client = None
+        # if key missing, disable LLM for demo/offline
         if self.provider == "claude":
-            self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+            if ANTHROPIC_API_KEY:
+                try:
+                    self.client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+                except Exception as e:
+                    print(f"⚠️  Failed to initialize Claude client: {e}")
+            else:
+                print("⚠️  No ANTHROPIC_API_KEY provided; LLM calls will be skipped.")
         elif self.provider == "openai":
-            openai.api_key = OPENAI_API_KEY
+            if OPENAI_API_KEY:
+                openai.api_key = OPENAI_API_KEY
+            else:
+                print("⚠️  No OPENAI_API_KEY provided; LLM calls will be skipped.")
         else:
             raise ValueError(f"Unknown LLM provider: {self.provider}")
     
@@ -91,6 +101,10 @@ Be concise but insightful."""
     
     def _call_llm(self, prompt: str) -> str:
         """Call appropriate LLM with prompt"""
+        # If client is not configured or provider has no key, return placeholder
+        if self.client is None and self.provider in ("claude", "openai"):
+            return "{\"placeholder\": \"demo output\"}"
+
         try:
             if self.provider == "claude":
                 message = self.client.messages.create(
